@@ -102,6 +102,7 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
 
     # iterate over baselines
     for key in uv.get_antpairs():
+        print("averaging baseline ", key)
         ind1, ind2, indp = self._key2inds(key)
         assert len(ind2) == 0
         data = uv._smart_slicing(uv.data_array, ind1, ind2, indp, squeeze='none', force_copy=True)
@@ -120,6 +121,7 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
         n_int = dc.bda_compression_factor(max_decorr, freq, lx, ly, corr_FoV, chan_width,
                                           pre_fs_int_time, corr_dump_time)
         n_int = max(n_int, max_samples)
+        print("averaging {:d} time samples...".format(n_int))
 
         # figure out how many output samples we're going to have
         n_in = len(ind1)
