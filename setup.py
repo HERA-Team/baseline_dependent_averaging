@@ -2,11 +2,12 @@
 # Copyright (c) 2018 Paul La Plante
 # Licensed under the 2-clause BSD License
 
-from __future__ import print_function, divison, absolute_import
+from __future__ import print_function, division, absolute_import
 
 from setuptools import setup
 import glob
 import os
+import io
 import json
 
 from bda import version
@@ -20,7 +21,7 @@ with io.open('README.md', 'r', encoding='utf-8') as readme_file:
 
 setup_args = {
     'name': 'bda',
-    'author': 'Paul La Plante'
+    'author': 'Paul La Plante',
     'url': 'https://github.com/plaplant/baseline_dependent_averaging',
     'license': 'BSD',
     'description': 'a tool for applying baseline-dependent averaging to a radio interferometer dataset',

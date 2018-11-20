@@ -5,7 +5,7 @@
 from __future__ import print_function, division, absolute_import
 
 import numpy as np
-from astropy import constatns as const
+from astropy import constants as const
 from astropy.coordinates import Angle
 from astropy import units
 
@@ -87,7 +87,7 @@ def decorr_post_fs_int_time(lx, ly, post_fs_int_time, corr_FoV, wavelength,
 
 
 def bda_compression_factor(max_decorr=0.1, frequency=(250. * 1e6 * units.Hz), lx=(14.6 * units.m), ly=(14.6 * units.m),
-                           corr_FoV=Angle(20., units.degree), chan_width=chan_width, pre_fs_int_time=(0.1 * units.s),
+                           corr_FoV=Angle(20., units.degree), chan_width=(30.517 * units.kHz), pre_fs_int_time=(0.1 * units.s),
                            corr_dump_time=(10 * units.s)):
 
     # calculate the pre-BDA decorrelation given the correlator settings
