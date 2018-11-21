@@ -14,7 +14,7 @@ import pyuvdata.utils as uvutils
 from . import decorr_calc as dc
 
 
-def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr_dump_time=None):
+def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr_int_time=None):
     """
     Apply baseline dependent averaging to a UVData object.
     """
@@ -32,16 +32,16 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
         raise ValueError("corr_FoV_angle must be between 0 and 90 degrees")
     if max_decorr < 0 or max_decorr > 1:
         raise ValueError("max_decorr must be between 0 and 1")
-    if corr_dump_time is None:
-        # assume the dump time is the smallest int_time of the UVData object
-        corr_dump_time = np.unique(uv.int_time)[0] * units.s
+    if corr_int_time is None:
+        # assume the correlator integration time is the smallest int_time of the UVData object
+        corr_int_time = np.unique(uv.int_time)[0] * units.s
     else:
-        if not isinstance(corr_dump_time, units.Quantity):
-            raise ValueError("corr_dump_time must be an astropy.units.Quantity")
+        if not isinstance(corr_int_time, units.Quantity):
+            raise ValueError("corr_int_time must be an astropy.units.Quantity")
         try:
-            corr_dump_time.to(units.s)
+            corr_int_time.to(units.s)
         except UnitConversionError:
-            raise ValueError("corr_dump_time must be a Quantity with units of time")
+            raise ValueError("corr_int_time must be a Quantity with units of time")
 
     # get relevant bits of metadata
     freq = np.amax(uv.freq_array[0, :]) * units.Hz
@@ -119,7 +119,7 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
 
         # figure out how many time samples we can combine together
         n_int = dc.bda_compression_factor(max_decorr, freq, lx, ly, corr_FoV, chan_width,
-                                          pre_fs_int_time, corr_dump_time)
+                                          pre_fs_int_time, corr_int_time)
         n_int = max(n_int, max_samples)
         print("averaging {:d} time samples...".format(n_int))
 
