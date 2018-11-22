@@ -50,13 +50,13 @@ def decorr_chan_width(chan_width, baseline, corr_FoV):
                  * np.sin(corr_FoV.to(units.rad)) / const.c)
 
 
-def decorr_post_fs_int_time(lx, ly, post_fs_int_time, corr_FoV, wavelength,
+def decorr_post_fs_int_time(lx, ly, post_fs_int_time, corr_FoV, frequency,
                             telescope_latitude=hera_latitude):
     """
     Docstring goes here
     """
     wavelength = const.c / frequency.to(1 / units.s)
-    earth_rot_speed = (Angle(360, units.deg) / units.sday).to(units.arcminutes / units.s)
+    earth_rot_speed = (Angle(360, units.deg) / units.sday).to(units.arcminute / units.s)
 
     # case 1: +l
     du = _dudt(lx, ly, corr_FoV, earth_rot_speed, wavelength)
@@ -86,30 +86,32 @@ def decorr_post_fs_int_time(lx, ly, post_fs_int_time, corr_FoV, wavelength,
     return int_time, rfac.value
 
 
-def bda_compression_factor(max_decorr=0.1, frequency=(250. * 1e6 * units.Hz), lx=(14.6 * units.m), ly=(14.6 * units.m),
-                           corr_FoV=Angle(20., units.degree), chan_width=(30.517 * units.kHz), pre_fs_int_time=(0.1 * units.s),
-                           corr_dump_time=(10 * units.s)):
+def bda_compression_factor(max_decorr=0.1, frequency=(250. * 1e6 * units.Hz), lx=(14.6 * units.m),
+                           ly=(14.6 * units.m), corr_FoV_angle=Angle(20., units.degree),
+                           chan_width=(30.517 * units.kHz), pre_fs_int_time=(0.1 * units.s),
+                           corr_int_time=(10 * units.s)):
 
     # calculate the pre-BDA decorrelation given the correlator settings
     baseline = np.sqrt(lx**2 + ly**2)
-    decorr_cw= decorr_chan_width(chan_width, baseline, corr_FoV)
+    decorr_cw= decorr_chan_width(chan_width, baseline, corr_FoV_angle)
 
     decorr_pre_int = decorr_pre_fs_int_time(frequency, baseline, pre_fs_int_time)
 
-    decorr_post_int, max_rfac = decorr_post_fs_int_time(lx, ly, post_fs_int_time, corr_FoV, wavelength)
+    decorr_post_int, max_rfac = decorr_post_fs_int_time(lx, ly, corr_int_time,
+                                                        corr_FoV_angle, frequency)
 
     # calculate pre- and post-fs decorrelations
     pre_fs_decorr = 1 - (1 - decorr_cw) * (1 - decorr_pre_int)
     total_decorr = 1 - (1 - pre_fs_decorr) * (1 - decorr_post_int)
 
-    if post_fs_decorr < max_decorr:
+    if total_decorr < max_decorr:
         # if total decorrelation is less than max allowed, we can average
         # figure out the maximum amount of decorrelation allowed for post-fringe stop integration
         post_fs_decorr = 1 - (1 - max_decorr) / (1 - pre_fs_decorr)
         int_time = np.sqrt(6 * post_fs_decorr / (np.pi**2 * max_rfac))
 
         # compute the number of samples that can be averaged using a power-of-two scheme
-        num_ints = np.floor(np.log2(fs_int_time / corr_dump_time.to(units.s).value))
+        num_ints = np.floor(np.log2(int_time / corr_int_time.to(units.s).value))
         return num_ints
     else:
         # we're already above acceptable decorrelation value; cannot compress further

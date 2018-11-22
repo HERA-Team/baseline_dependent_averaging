@@ -10,16 +10,20 @@ import os
 import sys
 from pyuvdata import UVData
 from astropy import units
+from astropy.coordinates import Angle
+
+from bda import bda_tools
+
 
 # setup argparse
 a = argparse.ArgumentParser(description="A command-line script for performing baseline-dependent averaging")
-a.add_argument("file_in", type=str, help="input data file")
-a.add_argument("file_out", type=str, help="output data file")
-a.add_argument("max_decorr", default=0.1, help="maximum amount of decorrelation allowed; default is 10%")
-a.add_argument("pre_fs_int_time", default=0.1, help="time in seconds of phase stopping in correlator")
-a.add_argument("corr_FoV_angle", default=20., help="FoV angle in degrees at which to compute max_decorr; default is 20")
-a.add_argument("max_samples", default=4, help="maximum number of time samples to average together; default is 4")
-a.add_argument("corr_int_time", default=None,
+a.add_argument("--file_in", type=str, help="input data file")
+a.add_argument("--file_out", type=str, help="output data file")
+a.add_argument("--max_decorr", type=float, default=0.1, help="maximum amount of decorrelation allowed; default is 10%")
+a.add_argument("--pre_fs_int_time", type=float, default=0.1, help="time in seconds of phase stopping in correlator")
+a.add_argument("--corr_FoV_angle", type=float, default=20., help="FoV angle in degrees at which to compute max_decorr; default is 20")
+a.add_argument("--max_samples", type=int, default=4, help="maximum number of time samples to average together; default is 4")
+a.add_argument("--corr_int_time", type=float, default=None, required=False,
                help="total integration time of correlator; defaults to smallest integration_time in file")
 a.add_argument("--overwrite", default=False, action='store_true',
                help="overwrite output file if it already exists")
@@ -44,8 +48,8 @@ uv.read(args.file_in)
 
 # apply BDA
 pre_fs_int_time = args.pre_fs_int_time * units.s
-corr_FoV_angle = args.corr_FoV_angle * units.deg
-uv2 = apply_bda(uv, args.max_decorr, pre_fs_int_time, corr_FoV_angle, args.max_samples, args.corr_int_time)
+corr_FoV_angle = Angle(args.corr_FoV_angle, units.deg)
+uv2 = bda_tools.apply_bda(uv, args.max_decorr, pre_fs_int_time, corr_FoV_angle, args.max_samples, args.corr_int_time)
 
 # write out file
 if args.filetype == 'uvh5':

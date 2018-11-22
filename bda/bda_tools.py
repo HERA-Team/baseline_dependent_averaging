@@ -7,6 +7,7 @@ from __future__ import print_function, division, absolute_import
 import numpy as np
 from astropy import units
 from astropy.time import Time
+import astropy.constants as const
 from astropy.coordinates import Angle, EarthLocation, SkyCoord
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
@@ -28,13 +29,13 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
         pre_fs_int_time.to(units.s)
     except UnitConversionError:
         raise ValueError("pre_fs_int_time must be a Quantity with units of time")
-    if corr_FoV_angle.to(units.deg) < 0 or corr_FoV_angle.to(units.deg) > 90:
+    if corr_FoV_angle.to(units.deg).value < 0 or corr_FoV_angle.to(units.deg).value > 90:
         raise ValueError("corr_FoV_angle must be between 0 and 90 degrees")
     if max_decorr < 0 or max_decorr > 1:
         raise ValueError("max_decorr must be between 0 and 1")
     if corr_int_time is None:
         # assume the correlator integration time is the smallest int_time of the UVData object
-        corr_int_time = np.unique(uv.int_time)[0] * units.s
+        corr_int_time = np.unique(uv.integration_time)[0] * units.s
     else:
         if not isinstance(corr_int_time, units.Quantity):
             raise ValueError("corr_int_time must be an astropy.units.Quantity")
@@ -45,7 +46,7 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
 
     # get relevant bits of metadata
     freq = np.amax(uv.freq_array[0, :]) * units.Hz
-    chan_width = uv.chan_width * units.Hz
+    chan_width = uv.channel_width * units.Hz
     antpos_enu, ants = uv.get_ENU_antpos()
     telescope_location = EarthLocation.from_geocentric(uv.telescope_location[0],
                                                        uv.telescope_location[1],
@@ -98,29 +99,33 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
     uv2.integration_time = uv.integration_time
     uv2.data_array = uv.data_array
     uv2.flag_array = uv.flag_array
-    uv2.nsamples_array = uv.nsamples_array
+    uv2.nsample_array = uv.nsample_array
 
     # iterate over baselines
     for key in uv.get_antpairs():
         print("averaging baseline ", key)
-        ind1, ind2, indp = self._key2inds(key)
+        ind1, ind2, indp = uv._key2inds(key)
         assert len(ind2) == 0
         data = uv._smart_slicing(uv.data_array, ind1, ind2, indp, squeeze='none', force_copy=True)
-        flags = uv._smart_slicing(uv.flags_array, ind1, ind2, indp, squeeze='none', force_copy=True)
+        flags = uv._smart_slicing(uv.flag_array, ind1, ind2, indp, squeeze='none', force_copy=True)
         nsamples = uv._smart_slicing(uv.nsample_array, ind1, ind2, indp, squeeze='none', force_copy=True)
 
         # get lx and ly for baseline
-        ant1 = np.where(ants==key[0])
-        ant2 = np.where(ants==key[1])
+        ant1 = np.where(ants==key[0])[0][0]
+        ant2 = np.where(ants==key[1])[0][0]
         x1, y1, z1 = antpos_enu[ant1, :]
         x2, y2, z2 = antpos_enu[ant2, :]
         lx = np.abs(x2 - x1) * units.m
         ly = np.abs(y2 - y1) * units.m
 
         # figure out how many time samples we can combine together
-        n_int = dc.bda_compression_factor(max_decorr, freq, lx, ly, corr_FoV, chan_width,
-                                          pre_fs_int_time, corr_int_time)
-        n_int = max(n_int, max_samples)
+        if key[0] == key[1]:
+            # autocorrelation--don't average
+            n_int = 1
+        else:
+            n_int = dc.bda_compression_factor(max_decorr, freq, lx, ly, corr_FoV_angle, chan_width,
+                                              pre_fs_int_time, corr_int_time)
+        n_int = min(n_int, max_samples)
         print("averaging {:d} time samples...".format(n_int))
 
         # figure out how many output samples we're going to have
@@ -130,8 +135,9 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
         # get relevant metdata
         uvw_array = uv.uvw_array[ind1, :]
         times = uv.time_array[ind1]
-        if times != np.sorted(times):
-            raise AssertionError("times of uvdata object are not monotonically increasing; throwing our hands up")
+        if not np.all(times == np.sort(times)):
+            raise AssertionError("times of uvdata object are not monotonically increasing; "
+                                 "throwing our hands up")
         lsts = uv.lst_array[ind1]
         int_time = uv.integration_time[ind1]
         baselines = uv.baseline_array[ind1]
@@ -156,9 +162,9 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
             t0 = Time((times[i1] + times[i2 - 1]) / 2, scale='utc', format='jd')
             zenith_coord = SkyCoord(alt=Angle(90 * units.deg), az=Angle(0 * units.deg),
                                     obstime=t0, frame='altaz', location=telescope_location)
-            obs_zenit_coord = zenith_coord.transform_to('icrs')
+            obs_zenith_coord = zenith_coord.transform_to('icrs')
             zenith_ra = obs_zenith_coord.ra
-            zenith_dec = obs_zenithi_coord.dec
+            zenith_dec = obs_zenith_coord.dec
 
             # get data, flags, and nsamples of slices
             data_chunk = data[i1:i2, :, :, :]
@@ -186,21 +192,21 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
                                       y=uvw_ecef[:, 1] * units.m,
                                       z=uvw_ecef[:, 2] * units.m,
                                       representation='cartesian',
-                                      frame='itrs', obsetime=t0)
+                                      frame='itrs', obstime=t0)
             frame_uvw_coord = itrs_uvw_coord.transform_to('icrs')
 
             frame_rel_uvw = (frame_uvw_coord.cartesian.get_xyz().value.T
                              - frame_telescope_location.cartesian.get_xyz().value)
 
-            new_uvws = uvutils.phase_uvw(frame_phase_center.ra.rad,
-                                         frame_phase_center.dec.rad,
+            new_uvws = uvutils.phase_uvw(icrs_coord.ra.rad,
+                                         icrs_coord.dec.rad,
                                          frame_rel_uvw)
 
             # average these uvws together to get the "average" position in the uv-plane
             avg_uvws = np.average(new_uvws, axis=0)
 
             # calculate and apply phasor
-            w_lambda = (new_uvws[:, 2].reshape((i2 - i1 + 1), 1)
+            w_lambda = (new_uvws[:, 2].reshape((i2 - i1), 1)
                         / const.c.to('m/s').value * uv.freq_array.reshape(1, uv.Nfreqs))
             phs = np.exp(-1j * 2 * np.pi * w_lambda[:, None, :, None])
             data_chunk *= phs
@@ -222,23 +228,24 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
         # update data and metadata when we're done with this baseline
         current_index = start_index + n_out
         uv2.data_array[start_index:current_index, :, :, :] = data_out
-        uv2.flags_array[start_index:current_index, :, :, :] = flags_out
-        uv2.nsamples_array[start_index:current_index, :, :, :] = nsamples_out
+        uv2.flag_array[start_index:current_index, :, :, :] = flags_out
+        uv2.nsample_array[start_index:current_index, :, :, :] = nsamples_out
         uv2.uvw_array[start_index:current_index, :] = uvws_out
         uv2.time_array[start_index:current_index] = times_out
         uv2.lst_array[start_index:current_index] = lst_out
         uv2.integration_time[start_index:current_index] = int_time_out
-        uv2.ant_1_array[start_index:current_index] = ant1
-        uv2.ant_2_array[start_index:current_index] = ant2
-        uv2.baseline_array[start_index:current_index] = uvutils.antnums_to_baseline(ant1, ant2, uv2.Nants_telescope)
+        uv2.ant_1_array[start_index:current_index] = key[0]
+        uv2.ant_2_array[start_index:current_index] = key[1]
+        uv2.baseline_array[start_index:current_index] = uvutils.antnums_to_baseline(ant1, ant2,
+                                                                                    None)
         start_index = current_index
 
     # clean up -- shorten all arrays to actually be size Nblts
-    Nblts = start_index + 1
+    Nblts = start_index
     uv2.Nblts = Nblts
     uv2.data_array = uv2.data_array[:Nblts, :, :, :]
-    uv2.flags_array = uv2.flags_array[:Nblts, :, :, :]
-    uv2.nsamples_array = uv2.nsamples_array[:Nblts, :, :, :]
+    uv2.flag_array = uv2.flag_array[:Nblts, :, :, :]
+    uv2.nsample_array = uv2.nsample_array[:Nblts, :, :, :]
     uv2.uvw_array = uv2.uvw_array[:Nblts, :]
     uv2.time_array = uv2.time_array[:Nblts]
     uv2.lst_array = uv2.lst_array[:Nblts]
@@ -246,6 +253,7 @@ def apply_bda(uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_samples, corr
     uv2.ant_1_array = uv2.ant_1_array[:Nblts]
     uv2.ant_2_array = uv2.ant_2_array[:Nblts]
     uv2.baseline_array = uv2.baseline_array[:Nblts]
+    uv2.Ntimes = len(np.unique(uv2.time_array))
 
     # run a check
     uv2.check()
