@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# Copyright (c) 2018 Paul La Plante
+# Copyright (c) 2019 Paul La Plante
 # Licensed under the 2-clause BSD License
 
 from __future__ import print_function, division, absolute_import
@@ -58,6 +58,8 @@ def apply_bda(
             corr_int_time.to(units.s)
         except UnitConversionError:
             raise ValueError("corr_int_time must be a Quantity with units of time")
+    if uv.phase_type != "drift":
+        raise ValueError("UVData object must be in drift mode to apply BDA")
 
     # get relevant bits of metadata
     freq = np.amax(uv.freq_array[0, :]) * units.Hz
@@ -195,7 +197,8 @@ def apply_bda(
         for i in range(n_out):
             # compute zenith of the desired output time
             i1 = i * n_int
-            i2 = min((i + 1) * n_int, n_in)
+            i2 = min((i + 1) * n_int, n_in + 1)
+            assert i2 - i1 > 0
             t0 = Time((times[i1] + times[i2 - 1]) / 2, scale="utc", format="jd")
             zenith_coord = SkyCoord(
                 alt=Angle(90 * units.deg),
@@ -278,7 +281,7 @@ def apply_bda(
             uvws_out[i, :] = avg_uvws
             times_out[i] = (times[i1] + times[i2 - 1]) / 2
             lst_out[i] = (lsts[i1] + lsts[i2 - 1]) / 2
-            int_time_out[i] = np.average(int_time[i1:i2]) * (i2 - i1 - 1)
+            int_time_out[i] = np.average(int_time[i1:i2]) * (i2 - i1)
 
         # update data and metadata when we're done with this baseline
         current_index = start_index + n_out
