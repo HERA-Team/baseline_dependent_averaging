@@ -128,8 +128,10 @@ def bda_compression_factor(
         int_time = np.sqrt(6 * post_fs_decorr / (np.pi ** 2 * max_rfac))
 
         # compute the number of samples that can be averaged using a power-of-two scheme
-        num_ints = int(np.floor(np.log2(int_time / corr_int_time.to(units.s).value)))
-        return num_ints
+        num_two_foldings = int(
+            np.floor(np.log2(int_time / corr_int_time.to(units.s).value))
+        )
+        return num_two_foldings
     else:
         # we're already above acceptable decorrelation value; cannot compress further
-        return 1
+        return 0

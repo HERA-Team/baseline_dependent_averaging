@@ -42,7 +42,7 @@ a.add_argument(
 a.add_argument(
     "--max_time",
     type=float,
-    default=30.,
+    default=30.0,
     help="maximum amount of time to average; default is 30 seconds",
 )
 a.add_argument(
@@ -86,12 +86,7 @@ pre_fs_int_time = args.pre_fs_int_time * units.s
 corr_FoV_angle = Angle(args.corr_FoV_angle, units.deg)
 max_time = args.max_time * units.s
 uv2 = bda_tools.apply_bda(
-    uv,
-    args.max_decorr,
-    pre_fs_int_time,
-    corr_FoV_angle,
-    max_time,
-    args.corr_int_time,
+    uv, args.max_decorr, pre_fs_int_time, corr_FoV_angle, max_time, args.corr_int_time
 )
 
 # write out file

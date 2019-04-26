@@ -109,22 +109,23 @@ def apply_bda(
     # initialize place-keeping variables and Nblt-sized metadata
     start_index = 0
     uv2.Nblts = 0
-    uv2.uvw_array = uv.uvw_array
-    uv2.time_array = uv.time_array
-    uv2.lst_array = uv.lst_array
-    uv2.ant_1_array = uv.ant_1_array
-    uv2.ant_2_array = uv.ant_2_array
-    uv2.baseline_array = uv.baseline_array
-    uv2.integration_time = uv.integration_time
-    uv2.data_array = uv.data_array
-    uv2.flag_array = uv.flag_array
-    uv2.nsample_array = uv.nsample_array
+    uv2.uvw_array = np.zeros_like(uv.uvw_array)
+    uv2.time_array = np.zeros_like(uv.time_array)
+    uv2.lst_array = np.zeros_like(uv.lst_array)
+    uv2.ant_1_array = np.zeros_like(uv.ant_1_array)
+    uv2.ant_2_array = np.zeros_like(uv.ant_2_array)
+    uv2.baseline_array = np.zeros_like(uv.baseline_array)
+    uv2.integration_time = np.zeros_like(uv.integration_time)
+    uv2.data_array = np.zeros_like(uv.data_array)
+    uv2.flag_array = np.zeros_like(uv.flag_array)
+    uv2.nsample_array = np.zeros_like(uv.nsample_array)
 
     # iterate over baselines
     for key in uv.get_antpairs():
         print("averaging baseline ", key)
         ind1, ind2, indp = uv._key2inds(key)
-        assert len(ind2) == 0
+        if len(ind2) != 0:
+            raise AssertionError("ind2 from _key2inds() is not 0--exiting")
         data = uv._smart_slicing(
             uv.data_array, ind1, ind2, indp, squeeze="none", force_copy=True
         )
@@ -146,9 +147,9 @@ def apply_bda(
         # figure out how many time samples we can combine together
         if key[0] == key[1]:
             # autocorrelation--don't average
-            n_int = 1
+            n_two_foldings = 0
         else:
-            n_int = dc.bda_compression_factor(
+            n_two_foldings = dc.bda_compression_factor(
                 max_decorr,
                 freq,
                 lx,
@@ -159,10 +160,10 @@ def apply_bda(
                 corr_int_time,
             )
         # convert from max_time to max_samples
-        max_samples = np.floor(
-            (max_time / corr_int_time).to(units.dimensionless_unscaled)
-        )
-        n_int = min(n_int, max_samples)
+        max_samples = (max_time / corr_int_time).to(units.dimensionless_unscaled)
+        max_two_foldings = int(np.floor(np.log2(max_samples)))
+        n_two_foldings = min(n_two_foldings, max_two_foldings)
+        n_int = 2 ** (n_two_foldings)
         print("averaging {:d} time samples...".format(n_int))
 
         # figure out how many output samples we're going to have
@@ -193,111 +194,131 @@ def apply_bda(
         lst_out = np.empty((n_out,), dtype=np.float64)
         int_time_out = np.empty((n_out,), dtype=np.float64)
 
-        # phase up the data along each chunk of times
-        for i in range(n_out):
-            # compute zenith of the desired output time
-            i1 = i * n_int
-            i2 = min((i + 1) * n_int, n_in + 1)
-            assert i2 - i1 > 0
-            t0 = Time((times[i1] + times[i2 - 1]) / 2, scale="utc", format="jd")
-            zenith_coord = SkyCoord(
-                alt=Angle(90 * units.deg),
-                az=Angle(0 * units.deg),
-                obstime=t0,
-                frame="altaz",
-                location=telescope_location,
+        if n_out == n_in:
+            # we don't need to average
+            current_index = start_index + n_out
+            uv2.data_array[start_index:current_index, :, :, :] = data
+            uv2.flag_array[start_index:current_index, :, :, :] = flags
+            uv2.nsample_array[start_index:current_index, :, :, :] = nsamples
+            uv2.uvw_array[start_index:current_index, :] = uvw_array
+            uv2.time_array[start_index:current_index] = times
+            uv2.lst_array[start_index:current_index] = lsts
+            uv2.integration_time[start_index:current_index] = int_time
+            uv2.ant_1_array[start_index:current_index] = key[0]
+            uv2.ant_2_array[start_index:current_index] = key[1]
+            uv2.baseline_array[start_index:current_index] = uvutils.antnums_to_baseline(
+                ant1, ant2, None
             )
-            obs_zenith_coord = zenith_coord.transform_to("icrs")
-            zenith_ra = obs_zenith_coord.ra
-            zenith_dec = obs_zenith_coord.dec
+            start_index = current_index
 
-            # get data, flags, and nsamples of slices
-            data_chunk = data[i1:i2, :, :, :]
-            flags_chunk = flags[i1:i2, :, :, :]
-            nsamples_chunk = nsamples[i1:i2, :, :, :]
+        else:
+            # rats, we actually have to do work...
 
-            # actually phase now
-            # compute new uvw coordinates
-            icrs_coord = SkyCoord(
-                ra=zenith_ra, dec=zenith_dec, unit="radian", frame="icrs"
+            # phase up the data along each chunk of times
+            for i in range(n_out):
+                # compute zenith of the desired output time
+                i1 = i * n_int
+                i2 = min((i + 1) * n_int, n_in + 1)
+                assert i2 - i1 > 0
+                t0 = Time((times[i1] + times[i2 - 1]) / 2, scale="utc", format="jd")
+                zenith_coord = SkyCoord(
+                    alt=Angle(90 * units.deg),
+                    az=Angle(0 * units.deg),
+                    obstime=t0,
+                    frame="altaz",
+                    location=telescope_location,
+                )
+                obs_zenith_coord = zenith_coord.transform_to("icrs")
+                zenith_ra = obs_zenith_coord.ra
+                zenith_dec = obs_zenith_coord.dec
+
+                # get data, flags, and nsamples of slices
+                data_chunk = data[i1:i2, :, :, :]
+                flags_chunk = flags[i1:i2, :, :, :]
+                nsamples_chunk = nsamples[i1:i2, :, :, :]
+
+                # actually phase now
+                # compute new uvw coordinates
+                icrs_coord = SkyCoord(
+                    ra=zenith_ra, dec=zenith_dec, unit="radian", frame="icrs"
+                )
+                uvws = np.float64(uvw_array[i1:i2, :])
+                itrs_telescope_location = SkyCoord(
+                    x=uv.telescope_location[0] * units.m,
+                    y=uv.telescope_location[1] * units.m,
+                    z=uv.telescope_location[2] * units.m,
+                    representation_type="cartesian",
+                    frame="itrs",
+                    obstime=t0,
+                )
+                itrs_lat_lon_alt = uv.telescope_location_lat_lon_alt
+
+                frame_telescope_location = itrs_telescope_location.transform_to("icrs")
+
+                frame_telescope_location.representation_type = "cartesian"
+
+                uvw_ecef = uvutils.ECEF_from_ENU(uvws, *itrs_lat_lon_alt)
+
+                itrs_uvw_coord = SkyCoord(
+                    x=uvw_ecef[:, 0] * units.m,
+                    y=uvw_ecef[:, 1] * units.m,
+                    z=uvw_ecef[:, 2] * units.m,
+                    representation_type="cartesian",
+                    frame="itrs",
+                    obstime=t0,
+                )
+                frame_uvw_coord = itrs_uvw_coord.transform_to("icrs")
+
+                frame_rel_uvw = (
+                    frame_uvw_coord.cartesian.get_xyz().value.T
+                    - frame_telescope_location.cartesian.get_xyz().value
+                )
+
+                new_uvws = uvutils.phase_uvw(
+                    icrs_coord.ra.rad, icrs_coord.dec.rad, frame_rel_uvw
+                )
+
+                # average these uvws together to get the "average" position in the uv-plane
+                avg_uvws = np.average(new_uvws, axis=0)
+
+                # calculate and apply phasor
+                w_lambda = (
+                    new_uvws[:, 2].reshape((i2 - i1), 1)
+                    / const.c.to("m/s").value
+                    * uv.freq_array.reshape(1, uv.Nfreqs)
+                )
+                phs = np.exp(-1j * 2 * np.pi * w_lambda[:, None, :, None])
+                data_chunk *= phs
+
+                # sum data, propagate flag array, and adjusting nsample accordingly
+                data_slice = np.average(data_chunk, axis=0)
+                flag_slice = np.sum(flags_chunk, axis=0)
+                nsamples_slice = np.average(nsamples_chunk, axis=0)
+                data_out[i, :, :, :] = data_slice
+                flags_out[i, :, :, :] = flag_slice
+                nsamples_out[i, :, :, :] = nsamples_slice
+
+                # update metadata
+                uvws_out[i, :] = avg_uvws
+                times_out[i] = (times[i1] + times[i2 - 1]) / 2
+                lst_out[i] = (lsts[i1] + lsts[i2 - 1]) / 2
+                int_time_out[i] = np.average(int_time[i1:i2]) * (i2 - i1)
+
+            # update data and metadata when we're done with this baseline
+            current_index = start_index + n_out
+            uv2.data_array[start_index:current_index, :, :, :] = data_out
+            uv2.flag_array[start_index:current_index, :, :, :] = flags_out
+            uv2.nsample_array[start_index:current_index, :, :, :] = nsamples_out
+            uv2.uvw_array[start_index:current_index, :] = uvws_out
+            uv2.time_array[start_index:current_index] = times_out
+            uv2.lst_array[start_index:current_index] = lst_out
+            uv2.integration_time[start_index:current_index] = int_time_out
+            uv2.ant_1_array[start_index:current_index] = key[0]
+            uv2.ant_2_array[start_index:current_index] = key[1]
+            uv2.baseline_array[start_index:current_index] = uvutils.antnums_to_baseline(
+                ant1, ant2, None
             )
-            uvws = np.float64(uvw_array[i1:i2, :])
-            itrs_telescope_location = SkyCoord(
-                x=uv.telescope_location[0] * units.m,
-                y=uv.telescope_location[1] * units.m,
-                z=uv.telescope_location[2] * units.m,
-                representation="cartesian",
-                frame="itrs",
-                obstime=t0,
-            )
-            itrs_lat_lon_alt = uv.telescope_location_lat_lon_alt
-
-            frame_telescope_location = itrs_telescope_location.transform_to("icrs")
-
-            frame_telescope_location.representation = "cartesian"
-
-            uvw_ecef = uvutils.ECEF_from_ENU(uvws, *itrs_lat_lon_alt)
-
-            itrs_uvw_coord = SkyCoord(
-                x=uvw_ecef[:, 0] * units.m,
-                y=uvw_ecef[:, 1] * units.m,
-                z=uvw_ecef[:, 2] * units.m,
-                representation="cartesian",
-                frame="itrs",
-                obstime=t0,
-            )
-            frame_uvw_coord = itrs_uvw_coord.transform_to("icrs")
-
-            frame_rel_uvw = (
-                frame_uvw_coord.cartesian.get_xyz().value.T
-                - frame_telescope_location.cartesian.get_xyz().value
-            )
-
-            new_uvws = uvutils.phase_uvw(
-                icrs_coord.ra.rad, icrs_coord.dec.rad, frame_rel_uvw
-            )
-
-            # average these uvws together to get the "average" position in the uv-plane
-            avg_uvws = np.average(new_uvws, axis=0)
-
-            # calculate and apply phasor
-            w_lambda = (
-                new_uvws[:, 2].reshape((i2 - i1), 1)
-                / const.c.to("m/s").value
-                * uv.freq_array.reshape(1, uv.Nfreqs)
-            )
-            phs = np.exp(-1j * 2 * np.pi * w_lambda[:, None, :, None])
-            data_chunk *= phs
-
-            # sum data, propagate flag array, and adjusting nsample accordingly
-            data_slice = np.average(data_chunk, axis=0)
-            flag_slice = np.sum(flags_chunk, axis=0)
-            nsamples_slice = np.average(nsamples_chunk, axis=0)
-            data_out[i, :, :, :] = data_slice
-            flags_out[i, :, :, :] = flag_slice
-            nsamples_out[i, :, :, :] = nsamples_slice
-
-            # update metadata
-            uvws_out[i, :] = avg_uvws
-            times_out[i] = (times[i1] + times[i2 - 1]) / 2
-            lst_out[i] = (lsts[i1] + lsts[i2 - 1]) / 2
-            int_time_out[i] = np.average(int_time[i1:i2]) * (i2 - i1)
-
-        # update data and metadata when we're done with this baseline
-        current_index = start_index + n_out
-        uv2.data_array[start_index:current_index, :, :, :] = data_out
-        uv2.flag_array[start_index:current_index, :, :, :] = flags_out
-        uv2.nsample_array[start_index:current_index, :, :, :] = nsamples_out
-        uv2.uvw_array[start_index:current_index, :] = uvws_out
-        uv2.time_array[start_index:current_index] = times_out
-        uv2.lst_array[start_index:current_index] = lst_out
-        uv2.integration_time[start_index:current_index] = int_time_out
-        uv2.ant_1_array[start_index:current_index] = key[0]
-        uv2.ant_2_array[start_index:current_index] = key[1]
-        uv2.baseline_array[start_index:current_index] = uvutils.antnums_to_baseline(
-            ant1, ant2, None
-        )
-        start_index = current_index
+            start_index = current_index
 
     # clean up -- shorten all arrays to actually be size Nblts
     Nblts = start_index
