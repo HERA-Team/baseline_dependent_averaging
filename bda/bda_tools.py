@@ -291,9 +291,9 @@ def apply_bda(
                 data_chunk *= phs
 
                 # sum data, propagate flag array, and adjusting nsample accordingly
-                data_slice = np.average(data_chunk, axis=0)
+                data_slice = np.sum(data_chunk, axis=0)
                 flag_slice = np.sum(flags_chunk, axis=0)
-                nsamples_slice = np.average(nsamples_chunk, axis=0)
+                nsamples_slice = np.sum(nsamples_chunk, axis=0) / (i2 - i1)
                 data_out[i, :, :, :] = data_slice
                 flags_out[i, :, :, :] = flag_slice
                 nsamples_out[i, :, :, :] = nsamples_slice
