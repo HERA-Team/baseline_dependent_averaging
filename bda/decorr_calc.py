@@ -92,8 +92,8 @@ def decorr_post_fs_int_time(
     rfac = rfac.to(units.rad ** 2 / units.s ** 2)
 
     # add other factors; return time and max rfac value
-    int_time = np.pi ** 2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac.value
-    return int_time, rfac.value
+    decorr_frac = np.pi ** 2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac.value
+    return decorr_frac, rfac.value
 
 
 def bda_compression_factor(
