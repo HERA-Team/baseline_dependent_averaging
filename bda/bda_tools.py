@@ -218,7 +218,7 @@ def apply_bda(
             for i in range(n_out):
                 # compute zenith of the desired output time
                 i1 = i * n_int
-                i2 = min((i + 1) * n_int, n_in + 1)
+                i2 = min((i + 1) * n_int, n_in)
                 assert i2 - i1 > 0
                 t0 = Time((times[i1] + times[i2 - 1]) / 2, scale="utc", format="jd")
                 zenith_coord = SkyCoord(
