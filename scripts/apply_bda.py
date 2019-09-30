@@ -16,49 +16,50 @@ from bda import bda_tools
 
 
 # setup argparse
-a = argparse.ArgumentParser(
+ap = argparse.ArgumentParser(
     description="A command-line script for performing baseline-dependent averaging"
 )
-a.add_argument("--file_in", type=str, help="input data file")
-a.add_argument("--file_out", type=str, help="output data file")
-a.add_argument(
+ap.add_argument("--file_in", type=str, help="input data file")
+ap.add_argument("--file_out", type=str, help="output data file")
+ap.add_argument(
     "--max_decorr",
     type=float,
     default=0.1,
-    help="maximum amount of decorrelation allowed; default is 10%",
+    help=("maximum amount of decorrelation allowed between 0 and 1; "
+          "default is 0.1 (10%%)",)
 )
-a.add_argument(
+ap.add_argument(
     "--pre_fs_int_time",
     type=float,
     default=0.1,
     help="time in seconds of phase stopping in correlator",
 )
-a.add_argument(
+ap.add_argument(
     "--corr_FoV_angle",
     type=float,
     default=20.0,
     help="FoV angle in degrees at which to compute max_decorr; default is 20",
 )
-a.add_argument(
+ap.add_argument(
     "--max_time",
     type=float,
     default=30.0,
     help="maximum amount of time to average; default is 30 seconds",
 )
-a.add_argument(
+ap.add_argument(
     "--corr_int_time",
     type=float,
     default=None,
     required=False,
     help="total integration time of correlator; defaults to smallest integration_time in file",
 )
-a.add_argument(
+ap.add_argument(
     "--overwrite",
     default=False,
     action="store_true",
     help="overwrite output file if it already exists",
 )
-a.add_argument(
+ap.add_argument(
     "--filetype",
     default="uvh5",
     type=str,
@@ -66,7 +67,7 @@ a.add_argument(
 )
 
 # get args
-args = a.parse_args()
+args = ap.parse_args()
 
 if os.path.exists(args.file_out) and args.overwrite is False:
     print("{} exists. Use --overwrite to overwrite the file.".format(args.file_out))
