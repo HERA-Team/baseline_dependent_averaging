@@ -65,6 +65,8 @@ def apply_bda(
     freq = np.amax(uv.freq_array[0, :]) * units.Hz
     chan_width = uv.channel_width * units.Hz
     antpos_enu, ants = uv.get_ENU_antpos()
+    lat, lon, alt = uv.telescope_location_lat_lon_alt
+    antpos_ecef = uvutils.ECEF_from_ENU(antpos_enu, lat, lon, alt)
     telescope_location = EarthLocation.from_geocentric(
         uv.telescope_location[0],
         uv.telescope_location[1],
@@ -139,8 +141,8 @@ def apply_bda(
         # get lx and ly for baseline
         ant1 = np.where(ants == key[0])[0][0]
         ant2 = np.where(ants == key[1])[0][0]
-        x1, y1, z1 = antpos_enu[ant1, :]
-        x2, y2, z2 = antpos_enu[ant2, :]
+        x1, y1, z1 = antpos_ecef[ant1, :]
+        x2, y2, z2 = antpos_ecef[ant2, :]
         lx = np.abs(x2 - x1) * units.m
         ly = np.abs(y2 - y1) * units.m
 
