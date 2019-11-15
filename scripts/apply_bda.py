@@ -25,8 +25,10 @@ ap.add_argument(
     "--max_decorr",
     type=float,
     default=0.1,
-    help=("maximum amount of decorrelation allowed between 0 and 1; "
-          "default is 0.1 (10%%)",)
+    help=(
+        "maximum amount of decorrelation allowed between 0 and 1; "
+        "default is 0.1 (10%%)",
+    ),
 )
 ap.add_argument(
     "--pre_fs_int_time",

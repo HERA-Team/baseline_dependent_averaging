@@ -18,8 +18,56 @@ from . import decorr_calc as dc
 def apply_bda(
     uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_time, corr_int_time=None
 ):
-    """
-    Apply baseline dependent averaging to a UVData object.
+    """Apply baseline dependent averaging to a UVData object.
+
+    For each baseline in the UVData object, the expected decorrelation from
+    averaging in time is computed. Baselines are averaged together in powers-
+    of-two until the specified level of decorrelation is reached (rounded down).
+
+    Parameters
+    ----------
+    uv : UVData object
+        The UVData object to apply BDA to. No changes are made to this object,
+        and instead a copy is returned.
+    max_decorr : float
+        The maximum decorrelation fraction desired in the output object. Must
+        be between 0 and 1.
+    pre_fs_int_time : astropy Quantity
+        The pre-finge-stopping integration time inside of the correlator. The
+        quantity should be compatible with units of time.
+    corr_FoV_angle : astropy Angle
+        The opening angle at which the maximum decorrelation is to be
+        calculated. Because a priori it is not known in which direction the
+        decorrelation will be largest, the expected decorrelation is computed in
+        all 4 cardinal directions at `corr_FoV_angle` degrees off of zenith,
+        and the largest one is used. This is a "worst case scenario"
+        decorrelation.
+    max_time : astropy Quantity
+        The maximum amount of time that spectra from different times should be
+        combined for. The ultimate integration time for a given baseline will be
+        for max_time or the integration time that is smaller than the specified
+        decorrelation level, whichever is smaller. The quantity should be
+        compatible with units of time.
+    corr_int_time : astropy Quantity, optional
+        The output time of the correlator. If not specified, the smallest
+        integration_time in the UVData object is used. If specified, the
+        quantity should be compatible with units of time.
+
+    Returns
+    -------
+    uv2 : UVData object
+        The UVData object with BDA applied.
+
+    Raises
+    ------
+    ValueError
+        This is raised if the input parameters are not the appropriate type or
+        in the appropriate range. It is also raised if the input UVData object
+        is not in drift mode (the BDA code does rephasing within an averaged
+        set of baselines).
+    AssertionError
+        This is raised if the baselines of the UVData object are not time-
+        ordered.
     """
     if not isinstance(uv, UVData):
         raise ValueError(
@@ -127,7 +175,10 @@ def apply_bda(
         print("averaging baseline ", key)
         ind1, ind2, indp = uv._key2inds(key)
         if len(ind2) != 0:
-            raise AssertionError("ind2 from _key2inds() is not 0--exiting")
+            raise AssertionError(
+                "ind2 from _key2inds() is not 0--exiting. This should not happen, "
+                "please contact the package maintainers."
+            )
         data = uv._smart_slicing(
             uv.data_array, ind1, ind2, indp, squeeze="none", force_copy=True
         )
