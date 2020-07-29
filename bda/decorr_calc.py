@@ -2,8 +2,6 @@
 # Copyright (c) 2018 Paul La Plante
 # Licensed under the 2-clause BSD License
 
-from __future__ import print_function, division, absolute_import
-
 import numpy as np
 from astropy import constants as const
 from astropy.coordinates import Angle
@@ -194,23 +192,23 @@ def decorr_post_fs_int_time(
 
     # case 1: +l
     du = _dudt(lx, ly, corr_FoV, earth_rot_speed, wavelength)
-    l = np.cos(90.0 * units.deg + corr_FoV)
-    rfac = (du * l) ** 2
+    lval = np.cos(90.0 * units.deg + corr_FoV)
+    rfac = (du * lval) ** 2
 
     # case 2: -l
     du = _dudt(lx, ly, -corr_FoV, earth_rot_speed, wavelength)
-    l = np.cos(90.0 * units.deg - corr_FoV)
-    rfac = max(rfac, (du * l) ** 2)
+    lval = np.cos(90.0 * units.deg - corr_FoV)
+    rfac = max(rfac, (du * lval) ** 2)
 
     # case 3: +m
     dv = _dvdt(lx, ly, 0.0, telescope_latitude + corr_FoV, earth_rot_speed, wavelength)
-    m = np.cos(90.0 * units.deg + corr_FoV)
-    rfac = max(rfac, (dv * m) ** 2)
+    mval = np.cos(90.0 * units.deg + corr_FoV)
+    rfac = max(rfac, (dv * mval) ** 2)
 
     # case 4: -m
     dv = _dvdt(lx, ly, 0.0, telescope_latitude - corr_FoV, earth_rot_speed, wavelength)
-    m = np.cos(90.0 * units.deg - corr_FoV)
-    rfac = max(rfac, (dv * m) ** 2)
+    mval = np.cos(90.0 * units.deg - corr_FoV)
+    rfac = max(rfac, (dv * mval) ** 2)
 
     # make sure we have the right units
     rfac = rfac.to(units.rad ** 2 / units.s ** 2)
@@ -301,8 +299,9 @@ def bda_compression_factor(
     total_decorr = 1 - (1 - pre_fs_decorr) * (1 - decorr_post_int)
 
     if total_decorr < max_decorr:
-        # if total decorrelation is less than max allowed, we can average
-        # figure out the maximum amount of decorrelation allowed for post-fringe stop integration
+        # If total decorrelation is less than max allowed, we can average.
+        # Figure out the maximum amount of decorrelation allowed for post-fringe
+        # stop integration.
         post_fs_decorr = 1 - (1 - max_decorr) / (1 - pre_fs_decorr)
         int_time = np.sqrt(6 * post_fs_decorr / (np.pi ** 2 * max_rfac))
 
