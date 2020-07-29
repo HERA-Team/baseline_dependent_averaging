@@ -3,8 +3,6 @@
 # Copyright (c) 2018 Paul La Plante
 # Licensed under the 2-clause BSD License
 
-from __future__ import print_function, division, absolute_import
-
 import argparse
 import os
 import sys
@@ -16,9 +14,8 @@ from bda import bda_tools
 
 
 # setup argparse
-ap = argparse.ArgumentParser(
-    description="A command-line script for performing baseline-dependent averaging"
-)
+desc = "A command-line script for performing baseline-dependent averaging"
+ap = argparse.ArgumentParser(description=desc)
 ap.add_argument("--file_in", type=str, help="input data file")
 ap.add_argument("--file_out", type=str, help="output data file")
 ap.add_argument(
@@ -48,13 +45,11 @@ ap.add_argument(
     default=30.0,
     help="maximum amount of time to average; default is 30 seconds",
 )
-ap.add_argument(
-    "--corr_int_time",
-    type=float,
-    default=None,
-    required=False,
-    help="total integration time of correlator; defaults to smallest integration_time in file",
+desc = (
+    "total integration time of correlator; defaults to smallest "
+    "integration_time in file"
 )
+ap.add_argument("--corr_int_time", type=float, default=None, required=False, help=desc)
 ap.add_argument(
     "--overwrite",
     default=False,

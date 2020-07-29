@@ -2,13 +2,13 @@
 # Copyright (c) 2019 Paul La Plante
 # Licensed under the 2-clause BSD License
 
-from __future__ import print_function, division, absolute_import
-
 import numpy as np
 from astropy import units
 from astropy.time import Time
 import astropy.constants as const
 from astropy.coordinates import Angle, EarthLocation, SkyCoord
+from astropy.units import UnitConversionError
+
 from pyuvdata import UVData
 import pyuvdata.utils as uvutils
 
@@ -97,7 +97,8 @@ def apply_bda(
     except UnitConversionError:
         raise ValueError("max_time must be a Quantity with units of time")
     if corr_int_time is None:
-        # assume the correlator integration time is the smallest int_time of the UVData object
+        # assume the correlator integration time is the smallest int_time of the
+        # UVData object
         corr_int_time = np.unique(uv.integration_time)[0] * units.s
     else:
         if not isinstance(corr_int_time, units.Quantity):
@@ -233,7 +234,6 @@ def apply_bda(
             )
         lsts = uv.lst_array[ind1]
         int_time = uv.integration_time[ind1]
-        baselines = uv.baseline_array[ind1]
 
         # do the averaging
         input_shape = data.shape
@@ -331,7 +331,8 @@ def apply_bda(
                     icrs_coord.ra.rad, icrs_coord.dec.rad, frame_rel_uvw
                 )
 
-                # average these uvws together to get the "average" position in the uv-plane
+                # average these uvws together to get the "average" position in
+                # the uv-plane
                 avg_uvws = np.average(new_uvws, axis=0)
 
                 # calculate and apply phasor
