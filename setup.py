@@ -9,8 +9,10 @@ import glob
 import os
 import io
 import json
+import sys
 
-from bda import version
+sys.path.append("bda")
+import version
 
 data = [
     version.git_origin,
