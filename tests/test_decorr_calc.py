@@ -68,3 +68,83 @@ def test_decorr_pre_fs_int_time():
     assert np.isclose(decorr, decorr_ref)
 
     return
+
+
+def test_decorr_chan_width():
+    # define quantities
+    corr_FoV = Angle(20.0, units.deg)
+    bl = 14.0 * units.m
+    chan_width = 50 * units.kHz
+    decorr = dc.decorr_chan_width(chan_width, bl, corr_FoV)
+
+    # compute comparison value
+    decorr_ref = chan_width.to(1 / units.s) * bl * np.sin(corr_FoV.to(units.rad)) / constants.c
+    assert np.isclose(decorr, float(decorr_ref))
+
+    return
+
+
+def test_decorr_post_fs_int_time():
+    # define quantities
+    lx = 14.0 * units.m
+    ly = 14.0 * units.m
+    post_fs_int_time = 10 * units.s
+    corr_FoV = Angle(20.0, units.deg)
+    frequency = 250 * units.MHz
+    decorr_frac, rfac = dc.decorr_post_fs_int_time(
+        lx, ly, post_fs_int_time, corr_FoV, frequency
+    )
+
+    # compute comparison value
+    wavelength = constants.c / frequency.to(1 / units.s)
+    earth_rot_speed = (Angle(360, units.deg) / units.sday).to(units.arcminute / units.s)
+    du = dc._dudt(lx, ly, -corr_FoV, earth_rot_speed, wavelength)
+    lval = np.cos(90.0 * units.deg - corr_FoV)
+    rfac_ref = ((du * lval) ** 2).to(units.rad ** 2 / units.s ** 2).value
+    assert np.isclose(rfac, rfac_ref)
+
+    decorr_frac_ref = (
+        np.pi **2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac_ref
+    )
+    assert np.isclose(decorr_frac_ref, decorr_frac)
+
+    return
+
+
+def test_bda_compression_factor():
+    # define quantities
+    max_decorr = 0.1
+    frequency = 250 * units.MHz
+    lx = 14.0 * units.m
+    ly = 14.0 * units.m
+    corr_FoV = Angle(20.0, units.deg)
+    chan_width = 50 * units.kHz
+    pre_fs_int_time = 0.1 * units.s
+    corr_int_time = 10 * units.s
+    num_two_foldings = dc.bda_compression_factor(
+        max_decorr,
+        frequency,
+        lx,
+        ly,
+        corr_FoV,
+        chan_width,
+        pre_fs_int_time,
+        corr_int_time,
+    )
+    assert num_two_foldings == 6
+
+    # now test a long baseline that can't be averaged more
+    lx = 1 * units.km
+    num_two_foldings = dc.bda_compression_factor(
+        max_decorr,
+        frequency,
+        lx,
+        ly,
+        corr_FoV,
+        chan_width,
+        pre_fs_int_time,
+        corr_int_time,
+    )
+    assert num_two_foldings == 0
+
+    return
