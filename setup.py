@@ -23,7 +23,6 @@ setup_args = {
     "package_dir": {"bda": "bda"},
     "packages": ["bda"],
     "scripts": glob.glob("scripts/*"),
-    "use_scm_version": True,
     "include_package_data": True,
     "install_requires": ["pyuvdata>=1.3.3", "astropy>=3.0", "setuptools_scm"],
     "classifiers": [
@@ -33,6 +32,7 @@ setup_args = {
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
         "Topic :: Scientific/Engineering :: Astronomy",
     ],
     "keywords": "baseline dependent averaging",
