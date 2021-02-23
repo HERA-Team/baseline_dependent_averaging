@@ -33,7 +33,7 @@ def fake_data_generator():
     uvd.Nblts = uvd.Ntimes * uvd.Nbls
 
     # define frequency array
-    nfreqs = 8
+    nfreqs = 1024
     freq_array = np.linspace(50e6, 250e6, num=nfreqs)
     uvd.freq_array = freq_array[np.newaxis, :]
     uvd.spw_array = [0]
@@ -75,7 +75,7 @@ def fake_data_generator():
 
     # set other metadata
     uvd.vis_units = "uncalib"
-    uvd.channel_width = 5e5  # 50 kHz
+    uvd.channel_width = 5e4  # 50 kHz
     uvd.phase_type = "drift"
     uvd.baseline_array = uvd.antnums_to_baseline(uvd.ant_1_array, uvd.ant_2_array)
     uvd.history = "BDA test file"
@@ -437,6 +437,7 @@ def test_apply_bda_ind2_key_error(fake_data):
 
 def test_apply_bda_non_increasing_error(fake_data):
     """Test error when times in object are not monotonically increasing."""
+    # mess with fake data
     uvd = fake_data
     uvd.time_array = uvd.time_array[::-1]
     max_decorr = 0.1
