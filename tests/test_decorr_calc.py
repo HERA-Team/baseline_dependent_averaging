@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2020 The HERA Collaboration
 # Licensed under the 2-clause BSD License
+"""Tests for decorr_calc.py module."""
 
 import numpy as np
 from astropy import units, constants
@@ -10,6 +11,7 @@ from bda import decorr_calc as dc
 
 
 def test_dudt():
+    """Test _dudt function."""
     # define quantities
     lx = 14.0 * units.m
     ly = 14.0 * units.m
@@ -18,9 +20,7 @@ def test_dudt():
     wavelength = constants.c / (250 * units.MHz)
 
     # compute reference value
-    dudt_check = (
-        lx.value * earth_omega.to("rad/s").value / wavelength.to("m").value
-    )
+    dudt_check = lx.value * earth_omega.to("rad/s").value / wavelength.to("m").value
 
     # run function and check
     dudt = dc._dudt(lx, ly, hour_angle, earth_omega, wavelength)
@@ -31,6 +31,7 @@ def test_dudt():
 
 
 def test_dvdt():
+    """Test _dvdt function."""
     # define quantities
     lx = 14.0 * units.m
     ly = 14.0 * units.m
@@ -53,6 +54,7 @@ def test_dvdt():
 
 
 def test_decorr_pre_fs_int_time():
+    """Test decorr_pre_fs_int_time function."""
     # define quantities
     freq = 250 * units.MHz
     bl = 14.0 * units.m
@@ -70,40 +72,44 @@ def test_decorr_pre_fs_int_time():
 
 
 def test_decorr_chan_width():
+    """Test decorr_chan_width function."""
     # define quantities
-    corr_FoV = Angle(20.0, units.deg)
+    corr_fov = Angle(20.0, units.deg)
     bl = 14.0 * units.m
     chan_width = 50 * units.kHz
-    decorr = dc.decorr_chan_width(chan_width, bl, corr_FoV)
+    decorr = dc.decorr_chan_width(chan_width, bl, corr_fov)
 
     # compute comparison value
-    decorr_ref = chan_width.to(1 / units.s) * bl * np.sin(corr_FoV.to(units.rad)) / constants.c
+    decorr_ref = (
+        chan_width.to(1 / units.s) * bl * np.sin(corr_fov.to(units.rad)) / constants.c
+    )
     assert np.isclose(decorr, float(decorr_ref))
 
     return
 
 
 def test_decorr_post_fs_int_time():
+    """Test decorr_post_fs_int_time function."""
     # define quantities
     lx = 14.0 * units.m
     ly = 14.0 * units.m
     post_fs_int_time = 10 * units.s
-    corr_FoV = Angle(20.0, units.deg)
+    corr_fov = Angle(20.0, units.deg)
     frequency = 250 * units.MHz
     decorr_frac, rfac = dc.decorr_post_fs_int_time(
-        lx, ly, post_fs_int_time, corr_FoV, frequency
+        lx, ly, post_fs_int_time, corr_fov, frequency
     )
 
     # compute comparison value
     wavelength = constants.c / frequency.to(1 / units.s)
     earth_rot_speed = (Angle(360, units.deg) / units.sday).to(units.arcminute / units.s)
-    du = dc._dudt(lx, ly, -corr_FoV, earth_rot_speed, wavelength)
-    lval = np.cos(90.0 * units.deg - corr_FoV)
+    du = dc._dudt(lx, ly, -corr_fov, earth_rot_speed, wavelength)
+    lval = np.cos(90.0 * units.deg - corr_fov)
     rfac_ref = ((du * lval) ** 2).to(units.rad ** 2 / units.s ** 2).value
     assert np.isclose(rfac, rfac_ref)
 
     decorr_frac_ref = (
-        np.pi **2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac_ref
+        np.pi ** 2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac_ref
     )
     assert np.isclose(decorr_frac_ref, decorr_frac)
 
@@ -111,12 +117,13 @@ def test_decorr_post_fs_int_time():
 
 
 def test_bda_compression_factor():
+    """Test bda_compression_factor function."""
     # define quantities
     max_decorr = 0.1
     frequency = 250 * units.MHz
     lx = 14.0 * units.m
     ly = 14.0 * units.m
-    corr_FoV = Angle(20.0, units.deg)
+    corr_fov = Angle(20.0, units.deg)
     chan_width = 50 * units.kHz
     pre_fs_int_time = 0.1 * units.s
     corr_int_time = 10 * units.s
@@ -125,7 +132,7 @@ def test_bda_compression_factor():
         frequency,
         lx,
         ly,
-        corr_FoV,
+        corr_fov,
         chan_width,
         pre_fs_int_time,
         corr_int_time,
@@ -139,7 +146,7 @@ def test_bda_compression_factor():
         frequency,
         lx,
         ly,
-        corr_FoV,
+        corr_fov,
         chan_width,
         pre_fs_int_time,
         corr_int_time,

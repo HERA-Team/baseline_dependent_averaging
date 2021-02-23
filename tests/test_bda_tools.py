@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2021 The HERA Collaboration
 # Licensed under the 2-clause BSD License
+"""Tests for bda_tools.py module."""
 
-import os
 import pytest
 import numpy as np
 from numpy.random import default_rng
-from astropy import units, constants
+from astropy import units
 from astropy.coordinates import Angle
 import pyuvdata
 import pyuvdata.utils as uvutils
@@ -17,6 +17,7 @@ from bda import bda_tools
 
 @pytest.fixture(scope="module")
 def fake_data_generator():
+    """Generate a fake dataset as a module-level fixture."""
     # generate a fake data file for testing BDA application
     uvd = UVData()
     t0 = 2459000.0
@@ -55,9 +56,6 @@ def fake_data_generator():
     # set telescope and antenna positions
     hera_telescope = pyuvdata.telescopes.get_telescope("HERA")
     uvd.telescope_location_lat_lon_alt = hera_telescope.telescope_location_lat_lon_alt
-    telescope_center_enu = uvutils.ENU_from_ECEF(
-        uvd.telescope_location, *uvd.telescope_location_lat_lon_alt
-    )
     antpos0 = np.asarray([0, 0, 0], dtype=np.float64)
     antpos1 = np.asarray([14, 0, 0], dtype=np.float64)
     antpos2 = np.asarray([28, 0, 0], dtype=np.float64)
@@ -100,6 +98,7 @@ def fake_data_generator():
 
 @pytest.fixture(scope="function")
 def fake_data(fake_data_generator):
+    """Make a per-function copy of main fake dataset."""
     uvd = fake_data_generator.copy()
     yield uvd
     del uvd
@@ -107,19 +106,19 @@ def fake_data(fake_data_generator):
 
 
 def test_apply_bda(fake_data):
-    """Generate test data and make sure that BDA is applied correctly"""
+    """Generate test data and make sure that BDA is applied correctly."""
     uvd = fake_data
 
     # define parameters
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.deg)
+    corr_fov_angle = Angle(20.0, units.deg)
     max_time = 30 * units.s
     uvd2 = bda_tools.apply_bda(
         uvd,
         max_decorr,
         pre_fs_int_time,
-        corr_FoV_angle,
+        corr_fov_angle,
         max_time,
     )
 
@@ -140,12 +139,12 @@ def test_apply_bda(fake_data):
 
 
 def test_apply_bda_non_uvd_error():
-    """Test error for not using a UVData object"""
+    """Test error for not using a UVData object."""
     # define parameters
     uvd = "foo"
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2 * units.s
 
@@ -155,7 +154,7 @@ def test_apply_bda_non_uvd_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
@@ -166,38 +165,38 @@ def test_apply_bda_non_uvd_error():
 
 
 def test_apply_bda_non_angle_error():
-    """Test error for not using an Angle for corr_FoV_angle"""
+    """Test error for not using an Angle for corr_fov_angle."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = "foo"
+    corr_fov_angle = "foo"
     max_time = 30 * units.s
     corr_int_time = 2 * units.s
 
-    # test using something besides an angle for corr_FoV_angle
+    # test using something besides an angle for corr_fov_angle
     with pytest.raises(ValueError) as cm:
         bda_tools.apply_bda(
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
     assert str(cm.value).startswith(
-        "corr_FoV_angle must be an Angle object from astropy.coordinates"
+        "corr_fov_angle must be an Angle object from astropy.coordinates"
     )
     return
 
 
 def test_apply_bda_pre_fs_int_time_float_error():
-    """Test error for not using a Quantity for pre_fs_int_time"""
+    """Test error for not using a Quantity for pre_fs_int_time."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2 * units.s
 
@@ -207,23 +206,21 @@ def test_apply_bda_pre_fs_int_time_float_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "pre_fs_int_time must be an astropy.units.Quantity"
-    )
+    assert str(cm.value).startswith("pre_fs_int_time must be an astropy.units.Quantity")
     return
 
 
 def test_apply_bda_pre_fs_int_time_bad_quantity_error():
-    """Test error for using an incompatible Quantity for pre_fs_int_time"""
+    """Test error for using an incompatible Quantity for pre_fs_int_time."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.m
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2 * units.s
 
@@ -233,7 +230,7 @@ def test_apply_bda_pre_fs_int_time_bad_quantity_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
@@ -243,39 +240,37 @@ def test_apply_bda_pre_fs_int_time_bad_quantity_error():
     return
 
 
-def test_apply_bda_bad_corr_FoV_angle_error():
-    """Test error for using an invalid corr_FoV_angle"""
+def test_apply_bda_bad_corr_fov_angle_error():
+    """Test error for using an invalid corr_fov_angle."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(180.0, units.degree)
+    corr_fov_angle = Angle(180.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2 * units.s
 
-    # use a bad corr_FoV_angle value
+    # use a bad corr_fov_angle value
     with pytest.raises(ValueError) as cm:
         bda_tools.apply_bda(
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "corr_FoV_angle must be between 0 and 90 degrees"
-    )
+    assert str(cm.value).startswith("corr_fov_angle must be between 0 and 90 degrees")
     return
 
 
 def test_apply_bda_max_decorr_error():
-    """Test error for supplying an invalid max_decorr value"""
+    """Test error for supplying an invalid max_decorr value."""
     # define parameters
     uvd = UVData()
     max_decorr = -0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2 * units.s
 
@@ -285,7 +280,7 @@ def test_apply_bda_max_decorr_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
@@ -294,12 +289,12 @@ def test_apply_bda_max_decorr_error():
 
 
 def test_apply_bda_max_time_float_error():
-    """Test error for using max_time as a float"""
+    """Test error for using max_time as a float."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30.0
     corr_int_time = 2 * units.s
 
@@ -309,23 +304,21 @@ def test_apply_bda_max_time_float_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "max_time must be an astropy.units.Quantity"
-    )
+    assert str(cm.value).startswith("max_time must be an astropy.units.Quantity")
     return
 
 
 def test_apply_bda_max_time_bad_quantity_error():
-    """Test error for using an incompatible quantity for max_time"""
+    """Test error for using an incompatible quantity for max_time."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.m
     corr_int_time = 2 * units.s
 
@@ -335,23 +328,21 @@ def test_apply_bda_max_time_bad_quantity_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "max_time must be a Quantity with units of time"
-    )
+    assert str(cm.value).startswith("max_time must be a Quantity with units of time")
     return
 
 
 def test_apply_bda_corr_int_time_float_error():
-    """Test error for using corr_int_time as a float"""
+    """Test error for using corr_int_time as a float."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2.0
 
@@ -361,22 +352,21 @@ def test_apply_bda_corr_int_time_float_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "corr_int_time must be an astropy.units.Quantity"
-    )
+    assert str(cm.value).startswith("corr_int_time must be an astropy.units.Quantity")
     return
 
+
 def test_apply_bda_corr_int_time_bad_quantity_error():
-    """Test error for using an incompatible quantity for corr_int_time"""
+    """Test error for using an incompatible quantity for corr_int_time."""
     # define parameters
     uvd = UVData()
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2.0 * units.m
 
@@ -386,7 +376,7 @@ def test_apply_bda_corr_int_time_bad_quantity_error():
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
@@ -395,14 +385,15 @@ def test_apply_bda_corr_int_time_bad_quantity_error():
     )
     return
 
+
 def test_apply_bda_phased_error(fake_data):
-    """Test error when applying bda to phased data"""
+    """Test error when applying bda to phased data."""
     # convert input data to phased
     uvd = fake_data
     uvd.phase_to_time(uvd.time_array[0])
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2.0 * units.s
 
@@ -411,24 +402,23 @@ def test_apply_bda_phased_error(fake_data):
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "UVData object must be in drift mode to apply BDA"
-    )
+    assert str(cm.value).startswith("UVData object must be in drift mode to apply BDA")
     return
 
+
 def test_apply_bda_ind2_key_error(fake_data):
-    """Test error when the length of ind2 is non-zero"""
+    """Test error when the length of ind2 is non-zero."""
     # mess with fake data
     uvd = fake_data
     uvd.ant_1_array[1] = 1
     uvd.ant_2_array[1] = 0
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
     corr_int_time = 2.0 * units.s
 
@@ -437,23 +427,21 @@ def test_apply_bda_ind2_key_error(fake_data):
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
             corr_int_time,
         )
-    assert str(cm.value).startswith(
-        "ind2 from _key2inds() is not 0--exiting"
-    )
+    assert str(cm.value).startswith("ind2 from _key2inds() is not 0--exiting")
     return
 
 
 def test_apply_bda_non_increasing_error(fake_data):
-    """Test error when times in object are not monotonically increasing"""
+    """Test error when times in object are not monotonically increasing."""
     uvd = fake_data
     uvd.time_array = uvd.time_array[::-1]
     max_decorr = 0.1
     pre_fs_int_time = 0.1 * units.s
-    corr_FoV_angle = Angle(20.0, units.degree)
+    corr_fov_angle = Angle(20.0, units.degree)
     max_time = 30 * units.s
 
     with pytest.raises(AssertionError) as cm:
@@ -461,7 +449,7 @@ def test_apply_bda_non_increasing_error(fake_data):
             uvd,
             max_decorr,
             pre_fs_int_time,
-            corr_FoV_angle,
+            corr_fov_angle,
             max_time,
         )
     assert str(cm.value).startswith(

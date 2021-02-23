@@ -1,6 +1,7 @@
 # -*- mode: python; coding: utf-8 -*-
 # Copyright (c) 2018 Paul La Plante
 # Licensed under the 2-clause BSD License
+"""Package for applying baseline-dependent averaging to radio astronomy datasets."""
 
 from setuptools import setup
 import glob
@@ -25,6 +26,7 @@ setup_args = {
     "scripts": glob.glob("scripts/*"),
     "include_package_data": True,
     "install_requires": ["pyuvdata>=1.3.3", "astropy>=3.0", "setuptools_scm"],
+    "extras_require": {"testing": ["pytest>=6.0", "pytest-cov", "pre-commit"]},
     "classifiers": [
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
