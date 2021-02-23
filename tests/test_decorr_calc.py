@@ -2,7 +2,6 @@
 # Copyright (c) 2020 The HERA Collaboration
 # Licensed under the 2-clause BSD License
 
-import pytest
 import numpy as np
 from astropy import units, constants
 from astropy.coordinates import Angle
