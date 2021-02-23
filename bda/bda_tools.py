@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2019 Paul La Plante
 # Licensed under the 2-clause BSD License
+"""Main tools for applying BDA."""
 
 import numpy as np
 from astropy import units
@@ -16,7 +17,7 @@ from . import decorr_calc as dc
 
 
 def apply_bda(
-    uv, max_decorr, pre_fs_int_time, corr_FoV_angle, max_time, corr_int_time=None
+    uv, max_decorr, pre_fs_int_time, corr_fov_angle, max_time, corr_int_time=None
 ):
     """Apply baseline dependent averaging to a UVData object.
 
@@ -35,11 +36,11 @@ def apply_bda(
     pre_fs_int_time : astropy Quantity
         The pre-finge-stopping integration time inside of the correlator. The
         quantity should be compatible with units of time.
-    corr_FoV_angle : astropy Angle
+    corr_fov_angle : astropy Angle
         The opening angle at which the maximum decorrelation is to be
         calculated. Because a priori it is not known in which direction the
         decorrelation will be largest, the expected decorrelation is computed in
-        all 4 cardinal directions at `corr_FoV_angle` degrees off of zenith,
+        all 4 cardinal directions at `corr_fov_angle` degrees off of zenith,
         and the largest one is used. This is a "worst case scenario"
         decorrelation.
     max_time : astropy Quantity
@@ -73,9 +74,9 @@ def apply_bda(
         raise ValueError(
             "apply_bda must be passed a UVData object as its first argument"
         )
-    if not isinstance(corr_FoV_angle, Angle):
+    if not isinstance(corr_fov_angle, Angle):
         raise ValueError(
-            "corr_FoV_angle must be an Angle object from astropy.coordinates"
+            "corr_fov_angle must be an Angle object from astropy.coordinates"
         )
     if not isinstance(pre_fs_int_time, units.Quantity):
         raise ValueError("pre_fs_int_time must be an astropy.units.Quantity")
@@ -84,10 +85,10 @@ def apply_bda(
     except UnitConversionError:
         raise ValueError("pre_fs_int_time must be a Quantity with units of time")
     if (
-        corr_FoV_angle.to(units.deg).value < 0
-        or corr_FoV_angle.to(units.deg).value > 90
+        corr_fov_angle.to(units.deg).value < 0
+        or corr_fov_angle.to(units.deg).value > 90
     ):
-        raise ValueError("corr_FoV_angle must be between 0 and 90 degrees")
+        raise ValueError("corr_fov_angle must be between 0 and 90 degrees")
     if max_decorr < 0 or max_decorr > 1:
         raise ValueError("max_decorr must be between 0 and 1")
     if not isinstance(max_time, units.Quantity):
@@ -208,7 +209,7 @@ def apply_bda(
                 freq,
                 lx,
                 ly,
-                corr_FoV_angle,
+                corr_fov_angle,
                 chan_width,
                 pre_fs_int_time,
                 corr_int_time,
@@ -374,19 +375,19 @@ def apply_bda(
             )
             start_index = current_index
 
-    # clean up -- shorten all arrays to actually be size Nblts
-    Nblts = start_index
-    uv2.Nblts = Nblts
-    uv2.data_array = uv2.data_array[:Nblts, :, :, :]
-    uv2.flag_array = uv2.flag_array[:Nblts, :, :, :]
-    uv2.nsample_array = uv2.nsample_array[:Nblts, :, :, :]
-    uv2.uvw_array = uv2.uvw_array[:Nblts, :]
-    uv2.time_array = uv2.time_array[:Nblts]
-    uv2.lst_array = uv2.lst_array[:Nblts]
-    uv2.integration_time = uv2.integration_time[:Nblts]
-    uv2.ant_1_array = uv2.ant_1_array[:Nblts]
-    uv2.ant_2_array = uv2.ant_2_array[:Nblts]
-    uv2.baseline_array = uv2.baseline_array[:Nblts]
+    # clean up -- shorten all arrays to actually be size nblts
+    nblts = start_index
+    uv2.Nblts = nblts
+    uv2.data_array = uv2.data_array[:nblts, :, :, :]
+    uv2.flag_array = uv2.flag_array[:nblts, :, :, :]
+    uv2.nsample_array = uv2.nsample_array[:nblts, :, :, :]
+    uv2.uvw_array = uv2.uvw_array[:nblts, :]
+    uv2.time_array = uv2.time_array[:nblts]
+    uv2.lst_array = uv2.lst_array[:nblts]
+    uv2.integration_time = uv2.integration_time[:nblts]
+    uv2.ant_1_array = uv2.ant_1_array[:nblts]
+    uv2.ant_2_array = uv2.ant_2_array[:nblts]
+    uv2.baseline_array = uv2.baseline_array[:nblts]
     uv2.Ntimes = len(np.unique(uv2.time_array))
 
     # run a check

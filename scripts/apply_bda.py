@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2018 Paul La Plante
 # Licensed under the 2-clause BSD License
+"""Apply BDA to a radio astronomy dataset on disk."""
 
 import argparse
 import os
@@ -34,7 +35,7 @@ ap.add_argument(
     help="time in seconds of phase stopping in correlator",
 )
 ap.add_argument(
-    "--corr_FoV_angle",
+    "--corr_fov_angle",
     type=float,
     default=20.0,
     help="FoV angle in degrees at which to compute max_decorr; default is 20",
@@ -81,10 +82,10 @@ uv.read(args.file_in)
 
 # apply BDA
 pre_fs_int_time = args.pre_fs_int_time * units.s
-corr_FoV_angle = Angle(args.corr_FoV_angle, units.deg)
+corr_fov_angle = Angle(args.corr_fov_angle, units.deg)
 max_time = args.max_time * units.s
 uv2 = bda_tools.apply_bda(
-    uv, args.max_decorr, pre_fs_int_time, corr_FoV_angle, max_time, args.corr_int_time
+    uv, args.max_decorr, pre_fs_int_time, corr_fov_angle, max_time, args.corr_int_time
 )
 
 # write out file

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2018 Paul La Plante
 # Licensed under the 2-clause BSD License
+"""Supporting tools for BDA calculation."""
 
 import numpy as np
 from astropy import constants as const
@@ -123,7 +124,7 @@ def decorr_pre_fs_int_time(frequency, baseline, pre_fs_int_time):
     return float(pre_fs_int_time * earth_rot_speed / max_resolution.to(units.arcminute))
 
 
-def decorr_chan_width(chan_width, baseline, corr_FoV):
+def decorr_chan_width(chan_width, baseline, corr_fov):
     """Compute the decorrelation due to the channel width.
 
     Parameters
@@ -132,7 +133,7 @@ def decorr_chan_width(chan_width, baseline, corr_FoV):
         The channel width. Must be compatible with units of inverse time.
     baseline : astropy Quantity
         The baseline length. Must be compatible with units of length.
-    corr_FoV : astropy Angle
+    corr_fov : astropy Angle
         The opening angle of interest.
 
     Returns
@@ -142,12 +143,12 @@ def decorr_chan_width(chan_width, baseline, corr_FoV):
         angle specified.
     """
     return float(
-        chan_width.to(1 / units.s) * baseline * np.sin(corr_FoV.to(units.rad)) / const.c
+        chan_width.to(1 / units.s) * baseline * np.sin(corr_fov.to(units.rad)) / const.c
     )
 
 
 def decorr_post_fs_int_time(
-    lx, ly, post_fs_int_time, corr_FoV, frequency, telescope_latitude=hera_latitude
+    lx, ly, post_fs_int_time, corr_fov, frequency, telescope_latitude=hera_latitude
 ):
     """Compute the decorrelation from averaging together spectra from different times.
 
@@ -165,11 +166,11 @@ def decorr_post_fs_int_time(
         The length of post fringe-stopped integration for the baseline. This is
         the "fundamental time" that is used for computing the decorrelation.
         Must be compatible with units of time.
-    corr_FoV : astropy Angle
+    corr_fov : astropy Angle
         The opening angle at which the maximum decorrelation is to be
         calculated. Because a priori it is not known in which direction the
         decorrelation will be largest, the expected decorrelation is computed in
-        all 4 cardinal directions at `corr_FoV_angle` degrees off of zenith,
+        all 4 cardinal directions at `corr_fov_angle` degrees off of zenith,
         and the largest one is used. This is a "worst case scenario"
         decorrelation.
     frequency : astropy Quantity
@@ -191,23 +192,23 @@ def decorr_post_fs_int_time(
     earth_rot_speed = (Angle(360, units.deg) / units.sday).to(units.arcminute / units.s)
 
     # case 1: +l
-    du = _dudt(lx, ly, corr_FoV, earth_rot_speed, wavelength)
-    lval = np.cos(90.0 * units.deg + corr_FoV)
+    du = _dudt(lx, ly, corr_fov, earth_rot_speed, wavelength)
+    lval = np.cos(90.0 * units.deg + corr_fov)
     rfac = (du * lval) ** 2
 
     # case 2: -l
-    du = _dudt(lx, ly, -corr_FoV, earth_rot_speed, wavelength)
-    lval = np.cos(90.0 * units.deg - corr_FoV)
+    du = _dudt(lx, ly, -corr_fov, earth_rot_speed, wavelength)
+    lval = np.cos(90.0 * units.deg - corr_fov)
     rfac = max(rfac, (du * lval) ** 2)
 
     # case 3: +m
-    dv = _dvdt(lx, ly, 0.0, telescope_latitude + corr_FoV, earth_rot_speed, wavelength)
-    mval = np.cos(90.0 * units.deg + corr_FoV)
+    dv = _dvdt(lx, ly, 0.0, telescope_latitude + corr_fov, earth_rot_speed, wavelength)
+    mval = np.cos(90.0 * units.deg + corr_fov)
     rfac = max(rfac, (dv * mval) ** 2)
 
     # case 4: -m
-    dv = _dvdt(lx, ly, 0.0, telescope_latitude - corr_FoV, earth_rot_speed, wavelength)
-    mval = np.cos(90.0 * units.deg - corr_FoV)
+    dv = _dvdt(lx, ly, 0.0, telescope_latitude - corr_fov, earth_rot_speed, wavelength)
+    mval = np.cos(90.0 * units.deg - corr_fov)
     rfac = max(rfac, (dv * mval) ** 2)
 
     # make sure we have the right units
@@ -225,7 +226,7 @@ def bda_compression_factor(
     frequency=(250.0 * 1e6 * units.Hz),
     lx=(14.6 * units.m),
     ly=(14.6 * units.m),
-    corr_FoV_angle=Angle(20.0, units.degree),
+    corr_fov_angle=Angle(20.0, units.degree),
     chan_width=(30.517 * units.kHz),
     pre_fs_int_time=(0.1 * units.s),
     corr_int_time=(10 * units.s),
@@ -253,11 +254,11 @@ def bda_compression_factor(
     ly : astropy Quantity, optional
         The length of the baseline along the y-axis in ECEF coordinates. If
         specified, must be compatible with units of length.
-    corr_FoV_angle : astropy Angle, optional
+    corr_fov_angle : astropy Angle, optional
         The opening angle at which the maximum decorrelation is to be
         calculated. Because a priori it is not known in which direction the
         decorrelation will be largest, the expected decorrelation is computed in
-        all 4 cardinal directions at `corr_FoV_angle` degrees off of zenith,
+        all 4 cardinal directions at `corr_fov_angle` degrees off of zenith,
         and the largest one is used. This is a "worst case scenario"
         decorrelation.
     chan_width : astropy Quantity, optional
@@ -283,15 +284,14 @@ def bda_compression_factor(
         averaged together. If the value returned is 1, then 2**1 == 2 samples
         can be averaged, etc.
     """
-
     # calculate the pre-BDA decorrelation given the correlator settings
     baseline = np.sqrt(lx ** 2 + ly ** 2)
-    decorr_cw = decorr_chan_width(chan_width, baseline, corr_FoV_angle)
+    decorr_cw = decorr_chan_width(chan_width, baseline, corr_fov_angle)
 
     decorr_pre_int = decorr_pre_fs_int_time(frequency, baseline, pre_fs_int_time)
 
     decorr_post_int, max_rfac = decorr_post_fs_int_time(
-        lx, ly, corr_int_time, corr_FoV_angle, frequency
+        lx, ly, corr_int_time, corr_fov_angle, frequency
     )
 
     # calculate pre- and post-fs decorrelations
