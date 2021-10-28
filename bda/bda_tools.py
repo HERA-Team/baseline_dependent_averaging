@@ -241,7 +241,7 @@ def apply_bda(
         assert input_shape == (n_in, 1, uv.Nfreqs, uv.Npols)
         output_shape = (n_out, 1, uv.Nfreqs, uv.Npols)
         data_out = np.empty(output_shape, dtype=np.complex128)
-        flags_out = np.empty(output_shape, dtype=np.bool)
+        flags_out = np.empty(output_shape, dtype=np.bool_)
         nsamples_out = np.empty(output_shape, dtype=np.float32)
         uvws_out = np.empty((n_out, 3), dtype=np.float64)
         times_out = np.empty((n_out,), dtype=np.float64)
@@ -389,6 +389,15 @@ def apply_bda(
     uv2.ant_2_array = uv2.ant_2_array[:nblts]
     uv2.baseline_array = uv2.baseline_array[:nblts]
     uv2.Ntimes = len(np.unique(uv2.time_array))
+
+    # set phasing info
+    uv2.phase_type = "phased"
+    uv2.phase_center_ra = zenith_ra.rad
+    uv2.phase_center_dec = zenith_dec.rad
+    uv2.phase_center_frame = 2000.0
+
+    # fix up to correct old phasing method
+    uv2.phase(zenith_ra.rad, zenith_dec.rad, epoch="J2000", fix_old_proj=True)
 
     # run a check
     uv2.check()
