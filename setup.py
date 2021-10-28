@@ -25,6 +25,7 @@ setup_args = {
     "packages": ["bda"],
     "scripts": glob.glob("scripts/*"),
     "include_package_data": True,
+    "use_scm_version": True,
     "install_requires": ["pyuvdata>=1.3.3", "astropy>=3.0", "setuptools_scm"],
     "extras_require": {"testing": ["pytest>=6.0", "pytest-cov", "pre-commit"]},
     "classifiers": [
