@@ -212,11 +212,11 @@ def decorr_post_fs_int_time(
     rfac = max(rfac, (dv * mval) ** 2)
 
     # make sure we have the right units
-    rfac = rfac.to(units.rad ** 2 / units.s ** 2)
+    rfac = rfac.to(units.rad**2 / units.s**2)
 
     # add other factors; return decorrelation fraction and max rfac value
     decorr_frac = (
-        np.pi ** 2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac.value
+        np.pi**2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac.value
     )
     return decorr_frac, rfac.value
 
@@ -285,7 +285,7 @@ def bda_compression_factor(
         can be averaged, etc.
     """
     # calculate the pre-BDA decorrelation given the correlator settings
-    baseline = np.sqrt(lx ** 2 + ly ** 2)
+    baseline = np.sqrt(lx**2 + ly**2)
     decorr_cw = decorr_chan_width(chan_width, baseline, corr_fov_angle)
 
     decorr_pre_int = decorr_pre_fs_int_time(frequency, baseline, pre_fs_int_time)
@@ -303,7 +303,7 @@ def bda_compression_factor(
         # Figure out the maximum amount of decorrelation allowed for post-fringe
         # stop integration.
         post_fs_decorr = 1 - (1 - max_decorr) / (1 - pre_fs_decorr)
-        int_time = np.sqrt(6 * post_fs_decorr / (np.pi ** 2 * max_rfac))
+        int_time = np.sqrt(6 * post_fs_decorr / (np.pi**2 * max_rfac))
 
         # compute the number of samples that can be averaged using a power-of-two scheme
         num_two_foldings = int(

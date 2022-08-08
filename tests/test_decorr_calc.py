@@ -105,11 +105,11 @@ def test_decorr_post_fs_int_time():
     earth_rot_speed = (Angle(360, units.deg) / units.sday).to(units.arcminute / units.s)
     du = dc._dudt(lx, ly, -corr_fov, earth_rot_speed, wavelength)
     lval = np.cos(90.0 * units.deg - corr_fov)
-    rfac_ref = ((du * lval) ** 2).to(units.rad ** 2 / units.s ** 2).value
+    rfac_ref = ((du * lval) ** 2).to(units.rad**2 / units.s**2).value
     assert np.isclose(rfac, rfac_ref)
 
     decorr_frac_ref = (
-        np.pi ** 2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac_ref
+        np.pi**2 * (post_fs_int_time.to(units.s).value) ** 2 / 6.0 * rfac_ref
     )
     assert np.isclose(decorr_frac_ref, decorr_frac)
 
