@@ -13,7 +13,6 @@ from astropy.coordinates import Angle
 
 from bda import bda_tools
 
-
 # setup argparse
 desc = "A command-line script for performing baseline-dependent averaging"
 ap = argparse.ArgumentParser(description=desc)
